@@ -1,7 +1,5 @@
-"use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-// We import ONLY the default component to prevent import errors
 import RepoGraph from './RepoGraph'; 
 import { Terminal, GitBranch, UploadCloud, DownloadCloud, Users, AlertCircle, CheckCircle2 } from 'lucide-react';
 
@@ -9,9 +7,24 @@ import { Terminal, GitBranch, UploadCloud, DownloadCloud, Users, AlertCircle, Ch
 type Command = {
   id: number;
   input: string;
+  hash?: string;
   type: 'commit' | 'branch' | 'merge' | 'checkout' | 'error';
   arg?: string;
 };
+
+
+// Generate a fake Git-like commit hash (40 hex chars)
+export function GitHash() {
+  const hex = "0123456789abcdef";
+  let hash = "";
+
+  for (let i = 0; i < 40; i++) {
+    hash += hex[Math.floor(Math.random() * 16)];
+  }
+
+  return hash;
+}
+
 
 export default function GitSimulator() {
   const [localCmds, setLocalCmds] = useState<Command[]>([]);
@@ -40,6 +53,7 @@ export default function GitSimulator() {
     setRemoteCmds(prev => [...prev, newCmd]);
     setFeedback("Update: A teammate just pushed code to origin/main!");
   };
+  
 
   const handleCommand = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,7 +85,7 @@ export default function GitSimulator() {
     if (action === 'commit') {
       const msgMatch = rawInput.match(/"([^"]+)"/);
       const msg = msgMatch ? msgMatch[1] : 'msg';
-      const newCmd: Command = { id: Date.now(), input: rawInput, type: 'commit', arg: msg };
+      const newCmd: Command = { id: Date.now(), input: rawInput,hash:GitHash(), type: 'commit', arg: msg };
       addToLocal(newCmd);
     } 
     else if (action === 'branch') {
@@ -107,8 +121,6 @@ export default function GitSimulator() {
     
     // --- NETWORK OPERATIONS (PUSH / PULL) ---
     else if (action === 'push') {
-        // Validation: If Remote has more commits than Local (and they aren't in Local), reject.
-        // Simplistic check: If remote length > local length, it usually means we are behind.
         if (remoteCmds.length > localCmds.length) {
             setFeedback("Error: Push rejected. Remote contains work you do not have locally. Run 'git pull' first.");
         } else {
@@ -147,6 +159,13 @@ export default function GitSimulator() {
         </button>
       </div>
 
+
+
+
+
+
+
+
       {/* DUAL GRAPH AREA (Split Screen) */}
       <div className="flex-1 p-4 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-hidden bg-slate-900/50">
          {/* LOCAL REPO */}
@@ -155,17 +174,28 @@ export default function GitSimulator() {
                 <UploadCloud size={12} /> Your Local PC
             </div>
             {/* Using the default export RepoGraph */}
-            <RepoGraph commands={localCmds} title="Local Repository" />
+            <RepoGraph commands={localCmds} title="Local Repository" local={true} />
          </div>
+
+
 
          {/* REMOTE REPO */}
          <div className="relative flex flex-col h-full">
             <div className="absolute -top-3 left-4 bg-purple-600 text-white text-xs px-3 py-1 rounded-full z-20 font-bold uppercase tracking-wider shadow-sm flex items-center gap-1">
                 <DownloadCloud size={12} /> Remote (GitHub)
             </div>
-            <RepoGraph commands={remoteCmds} title="origin/main" />
+            <RepoGraph commands={remoteCmds} title="origin/main"  local={false} />
          </div>
       </div>
+
+
+
+
+
+
+
+
+
 
       {/* TERMINAL AREA */}
       <div className="h-1/3 bg-black border-t-4 border-slate-700 p-4 flex flex-col shadow-2xl">
